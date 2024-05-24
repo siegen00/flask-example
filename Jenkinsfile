@@ -13,22 +13,25 @@ node {
          }
      }
      stage('Scan') {
-           // download report template
-           sh 'curl -sfL https://gist.githubusercontent.com/vjayajv/2fc83aaa80656f976bb39b447cad362d/raw/74a09bf76f8017001312daf65cb83f1b4f4e10d1/report.tmpl > report.tmpl'
-           
+           // Install trivy
+           sh 'curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.50.1'
+           sh 'curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl > html.tpl'
+
            // Scan all vuln levels
            sh 'mkdir -p reports'
            sh 'ls -R .'
-           sh 'grype 127.0.0.1/admin/flask-example:latest -o template -t report.tmpl --file report/grype.html'
-           
+           sh 'trivy filesystem --ignore-unfixed --vuln-type os,library --format template --template "@html.tpl" -o reports/nodjs-scan.html ./'
            publishHTML target : [
                allowMissing: true,
                alwaysLinkToLastBuild: true,
                keepAll: true,
                reportDir: 'reports',
-               reportFiles: 'grype.html',
-               reportName: 'Grype Scan',
-               reportTitles: 'Grype Scan'
+               reportFiles: 'nodjs-scan.html',
+               reportName: 'Trivy Scan',
+               reportTitles: 'Trivy Scan'
            ]
+
+           // Scan again and fail on CRITICAL vulns
+           sh 'trivy filesystem --ignore-unfixed --vuln-type os,library --exit-code 1 --severity CRITICAL ./'
        }
 }
