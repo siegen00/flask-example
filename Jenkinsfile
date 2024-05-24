@@ -12,26 +12,15 @@ node {
              app.push("latest")
          }
      }
-     stage('Scan') {
-           // Install trivy
-           sh 'curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.50.1'
-           sh 'curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl > html.tpl'
-
-           // Scan all vuln levels
-           sh 'mkdir -p reports'
-           sh 'ls -R .'
-           sh 'trivy filesystem --ignore-unfixed --vuln-type os,library --format template --template "@html.tpl" -o reports/nodjs-scan.html ./'
-           publishHTML target : [
-               allowMissing: true,
-               alwaysLinkToLastBuild: true,
-               keepAll: true,
-               reportDir: 'reports',
-               reportFiles: 'nodjs-scan.html',
-               reportName: 'Trivy Scan',
-               reportTitles: 'Trivy Scan'
-           ]
-
-           // Scan again and fail on CRITICAL vulns
-           sh 'trivy filesystem --ignore-unfixed --vuln-type os,library --exit-code 1 --severity CRITICAL ./'
-       }
+    stage('Test') {
+        echo 'Testing...'
+        snykSecurity(
+          snykInstallation: 'snyk@latest', //<Your Snyk Installation Name>
+          snykTokenId: 'snyk-api-token', //<Your Snyk API Token ID>
+          monitorProjectOnBuild: false, // 모니터링 여부
+          failOnIssues: false, // 취약성 발견시 빌드 실패로 할지여부(기본 값: true)  실패시에도 보고서는 생성됨
+          // place other parameters here
+          additionalArguments: 'https://github.com/gasbugs/flask-example'
+        )
+    }
 }
